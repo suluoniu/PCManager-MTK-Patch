@@ -17,9 +17,10 @@
 #include "winmm_ptrs.h"
 #include "winmm_table.h"
 
-extern "C" void MtkPatchInstall(void);
+extern "C" void MtkPatchInstall(HMODULE self);
 
 static HMODULE g_real = NULL;
+static HMODULE g_self = NULL;
 
 // The genuine winmm lives in System32; load it by full path so the app-local
 // search order cannot return our own module.
@@ -34,7 +35,7 @@ static HMODULE LoadSystemWinmm(void) {
 }
 
 static DWORD WINAPI InstallWorker(LPVOID) {
-    MtkPatchInstall();
+    MtkPatchInstall(g_self);
     return 0;
 }
 
@@ -64,6 +65,7 @@ BOOL APIENTRY DllMain(HMODULE module, DWORD reason, LPVOID) {
 
     // Deliberately off the loader lock: the patch install opens a device and
     // rewrites code, which is not DllMain material.
+    g_self = module;
     HANDLE worker = CreateThread(NULL, 0, InstallWorker, NULL, 0, NULL);
     if (worker) CloseHandle(worker);
     return TRUE;
