@@ -49,6 +49,12 @@ static GUID g_guid = {};
 static bool g_haveGuid = false;
 static volatile LONG g_repairs = 0;
 static volatile LONG g_loggedFailure = 0;
+static volatile LONG g_calls = 0;
+
+// The first few calls are logged unconditionally.  Without this, "no log line"
+// means either "the hook succeeded" or "the hook was never reached", and the two
+// need opposite fixes.
+static const LONG kLoggedCalls = 6;
 
 // Modules already handled in this process.  PatchImport on an already patched
 // slot would hand back our own thunk as "previous", so keep a list.
@@ -88,6 +94,12 @@ static DWORD WINAPI HookQuery(HANDLE client, const GUID* guid, WLAN_INTF_OPCODE 
                               PWLAN_OPCODE_VALUE_TYPE type) {
     DWORD rc = g_query ? g_query(client, guid, opcode, reserved, size, data, type)
                        : ERROR_PROC_NOT_FOUND;
+
+    const LONG call = InterlockedIncrement(&g_calls);
+    if (call <= kLoggedCalls) {
+        shimlog::Line("wlan", "query call=%ld opcode=%d rc=%lu", call, (int)opcode, rc);
+    }
+
     if (rc == ERROR_SUCCESS) return rc;
 
     if (rc != ERROR_NOT_FOUND) {

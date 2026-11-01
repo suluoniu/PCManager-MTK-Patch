@@ -74,10 +74,11 @@ static bool IsTargetProcess(HMODULE self) {
 extern "C" void MtkPatchInstall(HMODULE self) {
     // Log the decision for every process.  When a fix does not fire, the first
     // question is always "did this process get past the gate", and without this
-    // line the answer is invisible.
+    // line the answer is invisible.  The build tag makes it obvious which DLL a
+    // log line came from when several revisions have been installed in a row.
     const bool target = IsTargetProcess(self);
     const bool hi = IsHiConnectivityService();
-    shimlog::Line("gate", "%s target=%d hi=%d", ProcessName(), (int)target, (int)hi);
+    shimlog::Line("gate", "%s target=%d hi=%d build=v3", ProcessName(), (int)target, (int)hi);
 
     if (!mtk::Present()) {
         shimlog::Line("patch", "no \\\\.\\MTKBTFilter: nothing patched");
